@@ -238,23 +238,6 @@ import {
     onAuthStateChanged, 
     signOut 
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-async function exportarParaSheets(bloco, dataKey) {
-    const urlScript = "https://script.google.com/macros/s/AKfycbxm_v93NQagNCp0rrExyXp5ytjiu-CovYcGxKEU0VI7ObV0fRKGDxWEXywlYYHNhlik/exec";
-    const payload = {
-        colaborador: "ID_DO_USER", // Pode obter do auth.currentUser.uid
-        data: dataKey,
-        entrada: bloco.entrada,
-        saida: bloco.saida,
-        localizacao: bloco.localizacao
-    };
-
-    await fetch(urlScript, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-    });
-}
 
 const firebaseConfig = {
     apiKey: "AIzaSyCBAOQPsVWqCmZ2YfDwEMfzbHpc3z4ua9A",
