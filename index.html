@@ -226,10 +226,10 @@ async function enviarParaGoogleSheets(dadosRegisto) {
     
     const payload = {
        colaborador: dadosRegisto.userEmail ? dadosRegisto.userEmail.split('@')[0] : "Usuário",
-    data: dadosRegisto.data,
-    tipo: dadosRegisto.tipo, // Envie o tipo ("Entrada" ou "Saída")
-    hora: dadosRegisto.hora,
-    localizacao: dadosRegisto.localizacao
+        data: dadosRegisto.data,
+        tipo: dadosRegisto.tipo, // Envie o tipo ("Entrada" ou "Saída")
+        hora: dadosRegisto.hora,
+        localizacao: dadosRegisto.localizacao
     };
 
     try {
