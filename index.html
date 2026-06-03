@@ -19,9 +19,11 @@ body{
     justify-content:center;
     align-items:center;
     background:linear-gradient(135deg,#0f172a,#1e293b);
-    padding-left:220px;
+    padding-left:220px; /* Espaço para a sidebar em desktop */
+    padding: 20px 20px 20px 240px;
 }
 
+/* SIDEBAR - DESKTOP */
 .sidebar{
     position:fixed;
     top:0;
@@ -33,6 +35,7 @@ body{
     display:flex;
     flex-direction:column;
     justify-content:space-between;
+    z-index: 1000;
 }
 
 .sidebar h2{
@@ -40,6 +43,12 @@ body{
     text-align:center;
     padding:25px 10px;
     border-bottom:1px solid rgba(255,255,255,0.1);
+    font-size:1.2rem;
+}
+
+.sidebar .menu-links {
+    display: flex;
+    flex-direction: column;
 }
 
 .sidebar a{
@@ -75,8 +84,9 @@ body{
     background: rgba(239, 68, 68, 0.1);
 }
 
+/* CARD CONTAINER */
 .container{
-    width:90%;
+    width:100%;
     max-width:500px;
     background:white;
     padding:40px;
@@ -95,6 +105,7 @@ body{
 .subtitle{
     color:#64748b;
     margin-bottom:30px;
+    font-size: 0.95rem;
 }
 
 .clock{
@@ -111,13 +122,18 @@ body{
 }
 
 .btn{
+    flex: 1;
     border:none;
-    padding:15px 30px;
+    padding:15px 20px;
     font-size:1rem;
     border-radius:12px;
     cursor:pointer;
     transition:.3s;
     font-weight:600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .btn-entry{
@@ -155,6 +171,7 @@ body{
     border-radius:12px;
     color:#1e3a8a;
     font-size:.95rem;
+    word-break: break-word;
 }
 
 .record{
@@ -171,17 +188,87 @@ body{
     color:#94a3b8;
     font-size:0.9rem;
 }
+
+/* RENDERIZAÇÃO RESPONSIVA - TELEMÓVEL */
+@media (max-width: 768px) {
+    body {
+        padding: 80px 15px 20px 15px; /* Liberta espaço para o menu superior fixo */
+        flex-direction: column;
+    }
+
+    /* Transforma a sidebar numa barra de navegação superior */
+    .sidebar {
+        width: 100%;
+        height: 60px;
+        flex-direction: row;
+        border-right: none;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        align-items: center;
+    }
+
+    .sidebar h2 {
+        display: none; /* Oculta o título "Menu" no telemóvel para poupar espaço */
+    }
+
+    .sidebar .menu-links {
+        flex-direction: row;
+        height: 100%;
+    }
+
+    .sidebar a {
+        padding: 0 15px;
+        display: flex;
+        align-items: center;
+        height: 100%;
+        font-size: 0.9rem;
+    }
+
+    .btn-logout {
+        width: auto;
+        height: 100%;
+        padding: 0 15px;
+        border-top: none;
+        border-left: 1px solid rgba(255,255,255,0.1);
+        display: flex;
+        align-items: center;
+        font-size: 0.9rem;
+    }
+
+    .container {
+        padding: 25px 20px;
+        border-radius: 16px;
+    }
+
+    .logo {
+        font-size: 1.6rem;
+    }
+
+    .clock {
+        font-size: 2rem;
+        margin-bottom: 20px;
+    }
+
+    .buttons {
+        flex-direction: column; /* Coloca os botões um por cima do outro no telemóvel */
+        gap: 10px;
+    }
+
+    .btn {
+        width: 100%;
+        padding: 14px;
+    }
+}
 </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <div>
+    <div class="menu-links">
         <h2>📋 Menu</h2>
         <a href="index.html" class="active">🏠 Ponto Digital</a>
         <a href="historico.html">📅 Histórico</a>
     </div>
-    <button class="btn-logout" id="btnLogout">🚪 Terminar Sessão</button>
+    <button class="btn-logout" id="btnLogout">🚪 Sair</button>
 </div>
 
 <div class="container">
@@ -235,19 +322,18 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// GUARDA DE NAVEGAÇÃO: Monitoriza o estado do utilizador em tempo real
+let usuarioAtual = null;
+
 onAuthStateChanged(auth, (user) => {
     if (!user) {
-        // Sem sessão ativa: Redireciona imediatamente para o login
         window.location.href = "login.html";
     } else {
-        // Sessão ativa: Executa rotinas do sistema
+        usuarioAtual = user;
         verificarBloqueios();
         obterLocalizacao();
     }
 });
 
-// Ação do botão Terminar Sessão
 document.getElementById("btnLogout").addEventListener("click", () => {
     signOut(auth).then(() => {
         window.location.href = "login.html";
@@ -308,10 +394,15 @@ function obterLocalizacao(){
 }
 
 async function verificarBloqueios() {
+    if (!usuarioAtual) return { jaTemEntrada: false, jaTemSaida: false };
     const hoje = new Date().toLocaleDateString('pt-PT');
     
     try {
-        const q = query(collection(db, "registos"), where("data", "==", hoje));
+        const q = query(
+            collection(db, "registos"), 
+            where("userId", "==", usuarioAtual.uid), 
+            where("data", "==", hoje)
+        );
         const snapshot = await getDocs(q);
         
         let jaTemEntrada = false;
@@ -343,6 +434,7 @@ async function verificarBloqueios() {
 }
 
 async function registrar(tipo){
+    if (!usuarioAtual) return;
     obterLocalizacao();
     
     document.getElementById('record').innerHTML = "⏳ A processar registo, aguarde...";
@@ -370,6 +462,8 @@ async function registrar(tipo){
 
         try {
             await addDoc(collection(db, "registos"), {
+                userId: usuarioAtual.uid,
+                userEmail: usuarioAtual.email,
                 tipo: tipo,
                 data: data,
                 hora: hora,

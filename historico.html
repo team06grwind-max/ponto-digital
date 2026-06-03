@@ -15,10 +15,10 @@
 
 body{
     background:#f1f5f9;
-    padding:30px;
-    padding-left:250px;
+    padding: 30px 30px 30px 250px; /* Alinhado com a largura da sidebar em desktop */
 }
 
+/* SIDEBAR - DESKTOP */
 .sidebar{
     position:fixed;
     top:0;
@@ -30,6 +30,7 @@ body{
     display:flex;
     flex-direction:column;
     justify-content:space-between;
+    z-index: 1000;
 }
 
 .sidebar h2{
@@ -37,6 +38,12 @@ body{
     text-align:center;
     padding:25px 10px;
     border-bottom:1px solid rgba(255,255,255,0.1);
+    font-size:1.2rem;
+}
+
+.sidebar .menu-links {
+    display: flex;
+    flex-direction: column;
 }
 
 .sidebar a{
@@ -66,15 +73,18 @@ body{
     font-weight: 600;
     transition: 0.3s;
     border-top: 1px solid rgba(255,255,255,0.1);
+    -webkit-tap-highlight-color: transparent;
 }
 
 .btn-logout:hover {
     background: rgba(239, 68, 68, 0.1);
 }
 
+/* MAIN CONTAINER */
 .container{
     max-width:1200px;
     margin:auto;
+    width: 100%;
 }
 
 h1{
@@ -83,25 +93,34 @@ h1{
     color:#0f172a;
 }
 
+/* RESPONSIVIDADE DA TABELA */
+.table-container {
+    width: 100%;
+    overflow-x: auto; /* Permite scroll horizontal controlado em ecrãs pequenos */
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,.1);
+    background: white;
+}
+
 table{
     width:100%;
     border-collapse:collapse;
-    background:white;
-    border-radius:12px;
-    overflow:hidden;
-    box-shadow:0 5px 20px rgba(0,0,0,.1);
+    min-width: 600px; /* Garante que os dados mantêm leitura legível no telemóvel */
 }
 
 th{
     background:#0f172a;
     color:white;
     padding:15px;
+    font-size: 0.95rem;
 }
 
 td{
     padding:15px;
     text-align:center;
     border-bottom:1px solid #e2e8f0;
+    color: #334155;
+    font-size: 0.95rem;
 }
 
 tr:hover{
@@ -113,35 +132,92 @@ tr:hover{
     margin-top:50px;
     color:#64748b;
     font-size:1.1rem;
+    padding: 20px;
+}
+
+/* INTERFACE RESPONSIVA - TELEMÓVEL */
+@media (max-width: 768px) {
+    body {
+        padding: 80px 15px 20px 15px; /* Liberta espaço superior para a barra fixa */
+    }
+
+    /* Conversão da barra lateral para topo horizontal */
+    .sidebar {
+        width: 100%;
+        height: 60px;
+        flex-direction: row;
+        border-right: none;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        align-items: center;
+    }
+
+    .sidebar h2 {
+        display: none; /* Remove o título estrutural para priorizar espaço */
+    }
+
+    .sidebar .menu-links {
+        flex-direction: row;
+        height: 100%;
+    }
+
+    .sidebar a {
+        padding: 0 15px;
+        display: flex;
+        align-items: center;
+        height: 100%;
+        font-size: 0.9rem;
+    }
+
+    .btn-logout {
+        width: auto;
+        height: 100%;
+        padding: 0 15px;
+        border-top: none;
+        border-left: 1px solid rgba(255,255,255,0.1);
+        display: flex;
+        align-items: center;
+        font-size: 0.9rem;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+    }
+    
+    td, th {
+        padding: 12px 10px; /* Compactação de padding para ecrãs de menor escala */
+    }
 }
 </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <div>
+    <div class="menu-links">
         <h2>📋 Menu</h2>
         <a href="index.html">🏠 Ponto Digital</a>
         <a href="historico.html" class="active">📅 Histórico</a>
     </div>
-    <button class="btn-logout" id="btnLogout">🚪 Terminar Sessão</button>
+    <button class="btn-logout" id="btnLogout">🚪 Sair</button>
 </div>
 
 <div class="container">
     <h1>📋 Histórico de Registos</h1>
 
-    <table>
-        <thead>
-        <tr>
-            <th>Data</th>
-            <th>Entrada</th>
-            <th>Saída</th>
-            <th>Horas Trabalhadas</th>
-            <th>Localização</th>
-        </tr>
-        </thead>
-        <tbody id="corpoTabela"></tbody>
-    </table>
+    <div class="table-container">
+        <table>
+            <thead>
+            <tr>
+                <th>Data</th>
+                <th>Entrada</th>
+                <th>Saída</th>
+                <th>Horas Trabalhadas</th>
+                <th>Localização</th>
+            </tr>
+            </thead>
+            <tbody id="corpoTabela"></tbody>
+        </table>
+    </div>
 
     <div class="sem-registos" id="vazio" style="display:none;">
         A verificar autenticação...
@@ -155,6 +231,7 @@ import {
     collection,
     getDocs,
     query,
+    where,
     orderBy
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
 import { 
@@ -179,17 +256,15 @@ const auth = getAuth(app);
 const corpoTabela = document.getElementById("corpoTabela");
 const vazio = document.getElementById("vazio");
 
-// GUARDA DE NAVEGAÇÃO: Garante sessão ativa antes de puxar dados do Firestore
 onAuthStateChanged(auth, (user) => {
     if (!user) {
         window.location.href = "login.html";
     } else {
         vazio.style.display = "none";
-        carregarHistorico();
+        carregarHistorico(user.uid);
     }
 });
 
-// Ação do botão Terminar Sessão
 document.getElementById("btnLogout").addEventListener("click", () => {
     signOut(auth).then(() => {
         window.location.href = "login.html";
@@ -202,7 +277,7 @@ function arredondarHora(horaString) {
     let minutosTotais = horas * 60 + minutos;
     let minutosArredondados = Math.round(minutosTotais / 30) * 30;
     let novasHoras = Math.floor(minutosArredondados / 60) % 24;
-    let novosMinutos = minutosArredondados % 60;
+    let novosMinutos = minutesArredondados % 60;
     return `${String(novasHoras).padStart(2, '0')}:${String(novosMinutos).padStart(2, '0')}`;
 }
 
@@ -225,18 +300,23 @@ function formatarLocalizacao(localizacao) {
     return localizacao;
 }
 
-async function carregarHistorico(){
+async function carregarHistorico(uid){
     try{
-        const q = query(collection(db,"registos"), orderBy("criadoEm","asc"));
+        const q = query(
+            collection(db,"registos"),
+            where("userId", "==", uid),
+            orderBy("criadoEm","asc")
+        );
         const snapshot = await getDocs(q);
 
         if(snapshot.empty){
             vazio.style.display = "block";
             vazio.innerHTML = "Nenhum registo encontrado.";
+            corpoTabela.innerHTML = "";
             return;
         }
 
-        const linhasTrabalho = [];
+        const linesTrabalho = [];
 
         snapshot.forEach((doc) => {
             const r = doc.data();
@@ -245,7 +325,7 @@ async function carregarHistorico(){
             const horaTratada = arredondarHora(r.hora);
 
             if (tipo === "entrada") {
-                linhasTrabalho.push({
+                linesTrabalho.push({
                     data: r.data || "-",
                     entrada: horaTratada,
                     saida: "-",
@@ -253,8 +333,8 @@ async function carregarHistorico(){
                     localizacao: localizacaoFormatada
                 });
             } else if (tipo === "saída" || tipo === "saida") {
-                if (linhasTrabalho.length > 0) {
-                    const ultimaLinha = linhasTrabalho[linhasTrabalho.length - 1];
+                if (linesTrabalho.length > 0) {
+                    const ultimaLinha = linesTrabalho[linesTrabalho.length - 1];
                     if (ultimaLinha.saida === "-") {
                         ultimaLinha.saida = horaTratada;
                         ultimaLinha.horas = calcularDiferencaHoras(ultimaLinha.entrada, ultimaLinha.saida);
@@ -262,7 +342,7 @@ async function carregarHistorico(){
                             ultimaLinha.localizacao = localizacaoFormatada;
                         }
                     } else {
-                        linhasTrabalho.push({
+                        linesTrabalho.push({
                             data: r.data || "-",
                             entrada: "-",
                             saida: horaTratada,
@@ -271,7 +351,7 @@ async function carregarHistorico(){
                         });
                     }
                 } else {
-                    linhasTrabalho.push({
+                    linesTrabalho.push({
                         data: r.data || "-",
                         entrada: "-",
                         saida: horaTratada,
@@ -282,10 +362,10 @@ async function carregarHistorico(){
             }
         });
 
-        linhasTrabalho.reverse();
+        linesTrabalho.reverse();
 
         corpoTabela.innerHTML = "";
-        linhasTrabalho.forEach((linha) => {
+        linesTrabalho.forEach((linha) => {
             corpoTabela.innerHTML += `
                 <tr>
                     <td>${linha.data}</td>
