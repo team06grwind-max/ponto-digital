@@ -221,8 +221,7 @@ import {
   onAuthStateChanged, 
   signOut 
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
-async function enviarParaGoogleSheets(dadosRegisto) {
-    const urlScript = "https://script.google.com/macros/s/AKfycbxm_v93NQagNCp0rrExyXp5ytjiu-CovYcGxKEU0VI7ObV0fRKGDxWEXywlYYHNhlik/exec";
+
     
     const payload = {
         colaborador: dadosRegisto.userEmail ? dadosRegisto.userEmail.split('@')[0] : "Usuário",
@@ -233,17 +232,7 @@ async function enviarParaGoogleSheets(dadosRegisto) {
         localizacao: dadosRegisto.localizacao
     };
 
-    try {
-        await fetch(urlScript, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
-    } catch (error) {
-        console.error("Erro ao sincronizar com Sheets:", error);
-    }
-}
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyCBAOQPsVWqCmZ2YfDwEMfzbHpc3z4ua9A",
@@ -412,15 +401,7 @@ async function registrar(tipo){
                 longitude: longitude,
                 criadoEm: new Date()
             });
-            // 2. Chamada direta para o Sheets (sem usar Firebase Functions)
-            await enviarParaGoogleSheets({
-                userEmail: usuarioAtual.email,
-                data: data,
-                tipo: tipo,
-                hora: hora,
-                localizacao: localizacaoTexto
-            });
-            
+          
     
 
             document.getElementById('record').innerHTML = `
