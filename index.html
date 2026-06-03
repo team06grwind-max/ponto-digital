@@ -240,7 +240,7 @@ let latitude = null;
 let longitude = null;
 let localizacaoTexto = "";
 
-// --- FUNÇÕES DE TRATAMENTO DE HORAS (IGUAIS AO HISTÓRICO) ---
+// --- FUNÇÕES DE TRATAMENTO DE HORAS ---
 
 function arredondarHora(horaString) {
     if (!horaString || horaString === "-" || !horaString.includes(':')) return "-";
@@ -266,35 +266,19 @@ function calcularDiferencaHoras(entrada, saida) {
     return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}h`;
 }
 
-// Sincronização com o Google Sheets
 async function enviarParaGoogleSheets(dadosRegisto) {
     const urlScript = "https://script.google.com/macros/s/AKfycbxm_v93NQagNCp0rrExyXp5ytjiu-CovYcGxKEU0VI7ObV0fRKGDxWEXywlYYHNhlik/exec";
     
-    // Processa os arredondamentos e cálculos antes de enviar
-    const horaArredondadaAtual = arredondarHora(dadosRegisto.hora);
-    let horaEntradaCalculo = "-";
-    let horaSaidaCalculo = "-";
-    let totalTrabalhado = "-";
-
-    if (dadosRegisto.tipo === "Entrada") {
-        horaEntradaCalculo = horaArredondadaAtual;
-    } else {
-        horaSaidaCalculo = horaArredondadaAtual;
-        // Se for Saída, vai buscar a entrada do dia para calcular as horas trabalhadas
-        if (dadosRegisto.horaEntradaDoDia && dadosRegisto.horaEntradaDoDia !== "-") {
-            horaEntradaCalculo = arredondarHora(dadosRegisto.horaEntradaDoDia);
-            totalTrabalhado = calcularDiferencaHoras(horaEntradaCalculo, horaSaidaCalculo);
-        }
-    }
+    const horaSaidaArredondada = arredondarHora(dadosRegisto.horaSaida);
+    const horaEntradaArredondada = arredondarHora(dadosRegisto.horaEntradaDoDia);
+    const totalTrabalhado = calcularDiferencaHoras(horaEntradaArredondada, horaSaidaArredondada);
 
     const payload = {
         colaborador: dadosRegisto.userEmail ? dadosRegisto.userEmail.split('@')[0] : "Usuário",
         data: dadosRegisto.data,
-        tipo: dadosRegisto.tipo, 
-        hora: horaArredondadaAtual, // Hora Arredondada
-        horaEntrada: horaEntradaCalculo,
-        horaSaida: horaSaidaCalculo,
-        horasTrabalhadas: totalTrabalhado, // Horas calculadas incluídas aqui!
+        horaEntrada: horaEntradaArredondada,
+        horaSaida: horaSaidaArredondada,
+        horasTrabalhadas: totalTrabalhado,
         localizacao: dadosRegisto.localizacao
     };
 
@@ -321,7 +305,6 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// Ação do botão Terminar Sessão
 document.getElementById("btnLogout").addEventListener("click", () => {
     signOut(auth).then(() => {
         window.location.href = "login.html";
@@ -467,10 +450,8 @@ async function registrar(tipo){
             return;
         }
 
-        // Pega na hora de entrada caso o registo atual seja uma saída (para calcular no Sheets)
-        const horaEntradaDoDia = tipo === "Saída" ? await obterHoraEntradaDoDia() : "-";
-
         try {
+            // 1. Grava sempre no Firestore (Interno)
             await addDoc(collection(db, "registos"), {
                 userId: usuarioAtual.uid,
                 userEmail: usuarioAtual.email,
@@ -483,15 +464,17 @@ async function registrar(tipo){
                 criadoEm: new Date()
             });
 
-            // AGORA ENVIA TANTO ENTRADA COMO SAÍDA COM AS HORAS ARREDONDADAS E CALCULADAS
-            await enviarParaGoogleSheets({
-                userEmail: usuarioAtual.email,
-                data: data,
-                tipo: tipo,
-                hora: hora,
-                localizacao: localizacaoTexto,
-                horaEntradaDoDia: horaEntradaDoDia
-            });
+            // 2. Sincronização Google Sheets: SÓ ENVIA QUANDO FOR "SAÍDA"
+            if (tipo === "Saída") {
+                const horaEntradaDoDia = await obterHoraEntradaDoDia();
+                await enviarParaGoogleSheets({
+                    userEmail: usuarioAtual.email,
+                    data: data,
+                    horaSaida: hora,
+                    localizacao: localizacaoTexto,
+                    horaEntradaDoDia: horaEntradaDoDia
+                });
+            }
 
             const horaExibida = arredondarHora(hora);
             document.getElementById('record').innerHTML = `
@@ -503,8 +486,8 @@ async function registrar(tipo){
             await verificarBloqueios();
 
         } catch (erro) {
-            console.error("Erro ao gravar no Firestore:", erro);
-            document.getElementById('record').innerHTML = "❌ Erro ao gravar o ponto no servidor.";
+            console.error("Erro ao gravar o ponto:", erro);
+            document.getElementById('record').innerHTML = "❌ Erro ao gravar o ponto.";
         }
     }, 1500);
 }
