@@ -272,7 +272,10 @@ document.getElementById("btnLogout").addEventListener("click", () => {
 
 function arredondarHora(horaString) {
     if (!horaString || horaString === "-") return "-";
-    let [horas, minutos] = horaString.split(':').map(Number);
+    let partes = horaString.split(':');
+    let horas = Number(partes[0]);
+    let minutos = partes[1] ? Number(partes[1]) : 0;
+    
     let minutosTotais = horas * 60 + minutos;
     let minutosArredondados = Math.round(minutosTotais / 30) * 30;
     let novasHoras = Math.floor(minutosArredondados / 60) % 24;
@@ -315,77 +318,65 @@ async function carregarHistorico(uid){
             return;
         }
 
-        const linesTrabalho = [];
+        const blocosPorData = {};
 
         snapshot.forEach((doc) => {
             const r = doc.data();
+            const dataRegisto = r.data || "-";
             const tipo = r.tipo ? r.tipo.toLowerCase().trim() : "";
-            const localizacaoFormatada = formatarLocalizacao(r.localizacao);
             const horaTratada = r.hora ? arredondarHora(r.hora) : "-";
+            const localizacaoFormatada = formatarLocalizacao(r.localizacao);
+
+            if (dataRegisto === "-") return;
+
+            if (!blocosPorData[dataRegisto]) {
+                blocosPorData[dataRegisto] = {
+                    entrada: "-",
+                    saida: "-",
+                    localizacao: "-"
+                };
+            }
 
             if (tipo === "entrada") {
-                linesTrabalho.push({
-                    data: r.data || "-",
-                    entrada: horaTratada,
-                    saida: "-",
-                    horas: "-",
-                    localizacao: localizacaoFormatada
-                });
+                blocosPorData[dataRegisto].entrada = horaTratada;
+                if (blocosPorData[dataRegisto].localizacao === "-") {
+                    blocosPorData[dataRegisto].localizacao = localizacaoFormatada;
+                }
             } else if (tipo === "saída" || tipo === "saida") {
-                if (linesTrabalho.length > 0) {
-                    const ultimaLinha = linesTrabalho[linesTrabalho.length - 1];
-                    if (ultimaLinha.saida === "-") {
-                        ultimaLinha.saida = horaTratada;
-                        ultimaLinha.horas = calcularDiferencaHoras(ultimaLinha.entrada, ultimaLinha.saida);
-                        if (ultimaLinha.localizacao === "-") {
-                            ultimaLinha.localizacao = localizacaoFormatada;
-                        }
-                    } else {
-                        linesTrabalho.push({
-                            data: r.data || "-",
-                            entrada: "-",
-                            saida: horaTratada,
-                            horas: "-",
-                            localizacao: localizacaoFormatada
-                        });
-                    }
-                } else {
-                    linesTrabalho.push({
-                        data: r.data || "-",
-                        entrada: "-",
-                        saida: horaTratada,
-                        horas: "-",
-                        localizacao: localizacaoFormatada
-                    });
+                blocosPorData[dataRegisto].saida = horaTratada;
+                if (localizacaoFormatada !== "-") {
+                    blocosPorData[dataRegisto].localizacao = localizacaoFormatada;
                 }
             }
         });
 
-        linesTrabalho.reverse();
+        const datasOrdenadas = Object.keys(blocosPorData).sort((a, b) => {
+            const [diaA, mesA, anoA] = a.split('/').map(Number);
+            const [diaB, mesB, anoB] = b.split('/').map(Number);
+            return new Date(anoB, mesB - 1, diaB) - new Date(anoA, mesA - 1, diaA);
+        });
 
         corpoTabela.innerHTML = "";
-        linesTrabalho.forEach((linha) => {
+
+        datasOrdenadas.forEach((dataKey) => {
+            const bloco = blocosPorData[dataKey];
+            const horasTrabalhadas = calcularDiferencaHoras(bloco.entrada, bloco.saida);
+
             corpoTabela.innerHTML += `
                 <tr>
-                    <td>${linha.data}</td>
-                    <td>${linha.entrada}</td>
-                    <td>${linha.saida}</td>
-                    <td>${linha.horas}</td>
-                    <td>${linha.localizacao}</td>
+                    <td>${dataKey}</td>
+                    <td>${bloco.entrada}</td>
+                    <td>${bloco.saida}</td>
+                    <td>${horasTrabalhadas}</td>
+                    <td>${bloco.localizacao}</td>
                 </tr>
             `;
         });
 
-    }catch(erro){
+    } catch(erro) {
         console.error("Erro detalhado do Firestore:", erro);
         vazio.style.display = "block";
-        
-        // Exibe instruções claras no ecrã caso o erro seja falta de índice
-        if (erro.message && erro.message.includes("index")) {
-            vazio.innerHTML = "❌ Erro: Falta criar o índice no Firestore. Abra a consola (F12) e clique no link gerado pelo Firebase para resolver.";
-        } else {
-            vazio.innerHTML = "❌ Erro ao carregar os registos. Verifique a consola do navegador.";
-        }
+        vazio.innerHTML = "❌ Erro ao carregar os registos. Verifique a consola.";
     }
 }
 </script>
