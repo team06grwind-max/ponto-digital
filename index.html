@@ -18,9 +18,9 @@ body{
     display:flex;
     justify-content:center;
     align-items:center;
-    /* Imagem de fundo configurada para cobrir todo o ecrã com uma opacidade escura suave */
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.85)), 
-                url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQIMYdNkebmtJhpfPonmW0AAyX5swsCLPYO-A&s');
+    /* Nova imagem de fundo configurada com sombreamento para contraste ideal */
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8)), 
+                url('https://media.wired.com/photos/63227cb600704d14b5ffb891/4:3/w_2131,h_1598,c_limit/windturbines_Science_GettyImages-1203659530.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -254,10 +254,10 @@ function arredondarHora(horaString) {
     let horas = Number(partes[0]);
     let minutos = partes[1] ? Number(partes[1]) : 0;
     
-    let minutosTotais = horas * 60 + minutos;
+    let minutosTotais = horas * 60 + minutes;
     let minutosArredondados = Math.round(minutosTotais / 30) * 30;
     let novasHoras = Math.floor(minutosArredondados / 60) % 24;
-    let novosMinutos = minutesArredondados % 60; 
+    let novosMinutos = minutosArredondados % 60; 
     return `${String(novasHoras).padStart(2, '0')}:${String(novosMinutos).padStart(2, '0')}`;
 }
 
