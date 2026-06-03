@@ -271,7 +271,7 @@ document.getElementById("btnLogout").addEventListener("click", () => {
 });
 
 function arredondarHora(horaString) {
-    if (!horaString || horaString === "-") return "-";
+    if (!horaString || horaString === "-" || !horaString.includes(':')) return "-";
     let partes = horaString.split(':');
     let horas = Number(partes[0]);
     let minutos = partes[1] ? Number(partes[1]) : 0;
@@ -284,7 +284,7 @@ function arredondarHora(horaString) {
 }
 
 function calcularDiferencaHoras(entrada, saida) {
-    if (!entrada || entrada === "-" || !saida || saida === "-") return "-";
+    if (!entrada || entrada === "-" || !saida || saida === "-" || !entrada.includes(':') || !saida.includes(':')) return "-";
     const [hEntrada, mEntrada] = entrada.split(':').map(Number);
     const [hSaida, mSaida] = saida.split(':').map(Number);
     let totalMinutos = (hSaida * 60 + mSaida) - (hEntrada * 60 + mEntrada);
@@ -362,7 +362,6 @@ async function carregarHistorico(uid){
             const bloco = blocosPorData[dataKey];
             const horasTrabalhadas = calcularDiferencaHoras(bloco.entrada, bloco.saida);
 
-            // CORRIGIDO: De "corpaoTabela" para "corpoTabela"
             corpoTabela.innerHTML += `
                 <tr>
                     <td>${dataKey}</td>
