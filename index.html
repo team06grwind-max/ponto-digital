@@ -18,7 +18,13 @@ body{
     display:flex;
     justify-content:center;
     align-items:center;
-    background:linear-gradient(135deg,#0f172a,#1e293b);
+    /* Imagem de fundo configurada com máscara escura para contraste e legibilidade ideais */
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.8)), 
+                url('https://media.wired.com/photos/63227cb600704d14b5ffb891/4:3/w_2131,h_1598,c_limit/windturbines_Science_GettyImages-1203659530.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     padding-left:220px;
 }
 
@@ -81,7 +87,7 @@ body{
     background:white;
     padding:40px;
     border-radius:20px;
-    box-shadow:0 20px 40px rgba(0,0,0,0.2);
+    box-shadow:0 20px 40px rgba(0,0,0,0.3);
     text-align:center;
 }
 
@@ -451,7 +457,6 @@ async function registrar(tipo){
         }
 
         try {
-            // 1. Grava sempre no Firestore (Interno)
             await addDoc(collection(db, "registos"), {
                 userId: usuarioAtual.uid,
                 userEmail: usuarioAtual.email,
@@ -464,7 +469,6 @@ async function registrar(tipo){
                 criadoEm: new Date()
             });
 
-            // 2. Sincronização Google Sheets: SÓ ENVIA QUANDO FOR "SAÍDA"
             if (tipo === "Saída") {
                 const horaEntradaDoDia = await obterHoraEntradaDoDia();
                 await enviarParaGoogleSheets({
