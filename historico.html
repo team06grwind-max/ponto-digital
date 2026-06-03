@@ -362,7 +362,8 @@ async function carregarHistorico(uid){
             const bloco = blocosPorData[dataKey];
             const horasTrabalhadas = calcularDiferencaHoras(bloco.entrada, bloco.saida);
 
-            corpaoTabela.innerHTML += `
+            // CORRIGIDO: De "corpaoTabela" para "corpoTabela"
+            corpoTabela.innerHTML += `
                 <tr>
                     <td>${dataKey}</td>
                     <td>${bloco.entrada}</td>
