@@ -225,12 +225,11 @@ async function enviarParaGoogleSheets(dadosRegisto) {
     const urlScript = "https://script.google.com/macros/s/AKfycbxm_v93NQagNCp0rrExyXp5ytjiu-CovYcGxKEU0VI7ObV0fRKGDxWEXywlYYHNhlik/exec";
     
     const payload = {
-        colaborador: dadosRegisto.userEmail ? dadosRegisto.userEmail.split('@')[0] : "Usuário",
-        data: dadosRegisto.data,
-        entrada: dadosRegisto.tipo === "Entrada" ? dadosRegisto.hora : "-",
-        saida: dadosRegisto.tipo === "Saída" ? dadosRegisto.hora : "-",
-        horasTrabalhadas: "-",
-        localizacao: dadosRegisto.localizacao
+       colaborador: dadosRegisto.userEmail ? dadosRegisto.userEmail.split('@')[0] : "Usuário",
+    data: dadosRegisto.data,
+    tipo: dadosRegisto.tipo, // Envie o tipo ("Entrada" ou "Saída")
+    hora: dadosRegisto.hora,
+    localizacao: dadosRegisto.localizacao
     };
 
     try {
