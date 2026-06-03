@@ -15,7 +15,7 @@
 
 body{
     background:#f1f5f9;
-    padding: 30px 30px 30px 250px; /* Alinhado com a largura da sidebar em desktop */
+    padding: 30px 30px 30px 250px;
 }
 
 /* SIDEBAR - DESKTOP */
@@ -96,7 +96,7 @@ h1{
 /* RESPONSIVIDADE DA TABELA */
 .table-container {
     width: 100%;
-    overflow-x: auto; /* Permite scroll horizontal controlado em ecrãs pequenos */
+    overflow-x: auto;
     border-radius: 12px;
     box-shadow: 0 5px 20px rgba(0,0,0,.1);
     background: white;
@@ -105,7 +105,7 @@ h1{
 table{
     width:100%;
     border-collapse:collapse;
-    min-width: 600px; /* Garante que os dados mantêm leitura legível no telemóvel */
+    min-width: 600px;
 }
 
 th{
@@ -138,10 +138,9 @@ tr:hover{
 /* INTERFACE RESPONSIVA - TELEMÓVEL */
 @media (max-width: 768px) {
     body {
-        padding: 80px 15px 20px 15px; /* Liberta espaço superior para a barra fixa */
+        padding: 80px 15px 20px 15px;
     }
 
-    /* Conversão da barra lateral para topo horizontal */
     .sidebar {
         width: 100%;
         height: 60px;
@@ -152,7 +151,7 @@ tr:hover{
     }
 
     .sidebar h2 {
-        display: none; /* Remove o título estrutural para priorizar espaço */
+        display: none;
     }
 
     .sidebar .menu-links {
@@ -185,7 +184,7 @@ tr:hover{
     }
     
     td, th {
-        padding: 12px 10px; /* Compactação de padding para ecrãs de menor escala */
+        padding: 12px 10px;
     }
 }
 </style>
@@ -277,7 +276,10 @@ function arredondarHora(horaString) {
     let minutosTotais = horas * 60 + minutos;
     let minutosArredondados = Math.round(minutosTotais / 30) * 30;
     let novasHoras = Math.floor(minutosArredondados / 60) % 24;
-    let novosMinutos = minutesArredondados % 60;
+    
+    // CORREÇÃO: Variável corrigida de 'minutesArredondados' para 'minutosArredondados'
+    let novosMinutos = minutosArredondados % 60; 
+    
     return `${String(novasHoras).padStart(2, '0')}:${String(novosMinutos).padStart(2, '0')}`;
 }
 
