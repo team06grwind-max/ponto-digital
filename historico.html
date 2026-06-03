@@ -276,10 +276,7 @@ function arredondarHora(horaString) {
     let minutosTotais = horas * 60 + minutos;
     let minutosArredondados = Math.round(minutosTotais / 30) * 30;
     let novasHoras = Math.floor(minutosArredondados / 60) % 24;
-    
-    // CORREÇÃO: Variável corrigida de 'minutesArredondados' para 'minutosArredondados'
     let novosMinutos = minutosArredondados % 60; 
-    
     return `${String(novasHoras).padStart(2, '0')}:${String(novosMinutos).padStart(2, '0')}`;
 }
 
@@ -324,7 +321,7 @@ async function carregarHistorico(uid){
             const r = doc.data();
             const tipo = r.tipo ? r.tipo.toLowerCase().trim() : "";
             const localizacaoFormatada = formatarLocalizacao(r.localizacao);
-            const horaTratada = arredondarHora(r.hora);
+            const horaTratada = r.hora ? arredondarHora(r.hora) : "-";
 
             if (tipo === "entrada") {
                 linesTrabalho.push({
@@ -380,9 +377,15 @@ async function carregarHistorico(uid){
         });
 
     }catch(erro){
-        console.error("Erro ao carregar histórico:", erro);
+        console.error("Erro detalhado do Firestore:", erro);
         vazio.style.display = "block";
-        vazio.innerHTML = "❌ Erro ao carregar os registos.";
+        
+        // Exibe instruções claras no ecrã caso o erro seja falta de índice
+        if (erro.message && erro.message.includes("index")) {
+            vazio.innerHTML = "❌ Erro: Falta criar o índice no Firestore. Abra a consola (F12) e clique no link gerado pelo Firebase para resolver.";
+        } else {
+            vazio.innerHTML = "❌ Erro ao carregar os registos. Verifique a consola do navegador.";
+        }
     }
 }
 </script>
