@@ -413,13 +413,16 @@ async function registrar(tipo){
                 criadoEm: new Date()
             });
             // 2. Chamada direta para o Sheets (sem usar Firebase Functions)
-            await enviarParaGoogleSheets({
-                userEmail: usuarioAtual.email,
-                data: data,
-                tipo: tipo,
-                hora: hora,
-                localizacao: localizacaoTexto
-            });
+            if (tipo === "Saída") {
+                await enviarParaGoogleSheets({
+                    userEmail: usuarioAtual.email,
+                    data: data,
+                    tipo: tipo,
+                    hora: hora,
+                    localizacao: localizacaoTexto
+                });
+            }
+    
 
             document.getElementById('record').innerHTML = `
                 <strong>${tipo}</strong> registada às ${hora}<br><br>
