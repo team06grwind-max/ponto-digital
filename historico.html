@@ -238,6 +238,22 @@ import {
     onAuthStateChanged, 
     signOut 
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+function doPost(e) {
+  var params = JSON.parse(e.postData.contents);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  
+  // Apenda a linha já consolidada pelo histórico
+  sheet.appendRow([
+    params.colaborador, 
+    params.data, 
+    params.entrada, 
+    params.saida, 
+    "", // A fórmula na célula E2 calcula automaticamente
+    params.localizacao
+  ]);
+  
+  return ContentService.createTextOutput("Sucesso");
+}
 
 const firebaseConfig = {
     apiKey: "AIzaSyCBAOQPsVWqCmZ2YfDwEMfzbHpc3z4ua9A",
@@ -362,7 +378,7 @@ async function carregarHistorico(uid){
             const bloco = blocosPorData[dataKey];
             const horasTrabalhadas = calcularDiferencaHoras(bloco.entrada, bloco.saida);
 
-            corpoTabela.innerHTML += `
+            corpaoTabela.innerHTML += `
                 <tr>
                     <td>${dataKey}</td>
                     <td>${bloco.entrada}</td>
