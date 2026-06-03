@@ -30,6 +30,9 @@ body{
     height:100vh;
     background:#0f172a;
     border-right:1px solid rgba(255,255,255,0.1);
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
 }
 
 .sidebar h2{
@@ -53,6 +56,23 @@ body{
 
 .active{
     background:#1e293b;
+}
+
+.btn-logout {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    width: 100%;
+    text-align: left;
+    padding: 15px 20px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.3s;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.btn-logout:hover {
+    background: rgba(239, 68, 68, 0.1);
 }
 
 .container{
@@ -156,9 +176,12 @@ body{
 <body>
 
 <div class="sidebar">
-    <h2>📋 Menu</h2>
-    <a href="index.html" class="active">🏠 Ponto Digital</a>
-    <a href="historico.html">📅 Histórico</a>
+    <div>
+        <h2>📋 Menu</h2>
+        <a href="index.html" class="active">🏠 Ponto Digital</a>
+        <a href="historico.html">📅 Histórico</a>
+    </div>
+    <button class="btn-logout" id="btnLogout">🚪 Terminar Sessão</button>
 </div>
 
 <div class="container">
@@ -178,7 +201,7 @@ body{
     </div>
 
     <div class="location" id="location">📍 A obter localização...</div>
-    <div class="record" id="record">A verificar estado dos registos...</div>
+    <div class="record" id="record">A verificar autenticação...</div>
 
     <div class="footer">© 2026 Sistema de Picagem de Ponto</div>
 </div>
@@ -193,6 +216,11 @@ import {
   query,
   where
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { 
+  getAuth, 
+  onAuthStateChanged, 
+  signOut 
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCBAOQPsVWqCmZ2YfDwEMfzbHpc3z4ua9A",
@@ -205,6 +233,26 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+
+// GUARDA DE NAVEGAÇÃO: Monitoriza o estado do utilizador em tempo real
+onAuthStateChanged(auth, (user) => {
+    if (!user) {
+        // Sem sessão ativa: Redireciona imediatamente para o login
+        window.location.href = "login.html";
+    } else {
+        // Sessão ativa: Executa rotinas do sistema
+        verificarBloqueios();
+        obterLocalizacao();
+    }
+});
+
+// Ação do botão Terminar Sessão
+document.getElementById("btnLogout").addEventListener("click", () => {
+    signOut(auth).then(() => {
+        window.location.href = "login.html";
+    });
+});
 
 let latitude = null;
 let longitude = null;
@@ -258,9 +306,7 @@ function obterLocalizacao(){
         { enableHighAccuracy:true }
     );
 }
-obterLocalizacao();
 
-// Função que valida o estado diário e bloqueia os botões se o registo já existir
 async function verificarBloqueios() {
     const hoje = new Date().toLocaleDateString('pt-PT');
     
@@ -296,9 +342,6 @@ async function verificarBloqueios() {
     }
 }
 
-// Executa a validação assim que a página carrega
-verificarBloqueios();
-
 async function registrar(tipo){
     obterLocalizacao();
     
@@ -314,7 +357,6 @@ async function registrar(tipo){
             return;
         }
 
-        // Validação secundária antes da gravação para evitar bypass
         const { jaTemEntrada, jaTemSaida } = await verificarBloqueios();
         
         if (tipo === "Entrada" && jaTemEntrada) {
@@ -343,7 +385,6 @@ async function registrar(tipo){
                 📍 ${localizacaoTexto}
             `;
             
-            // Atualiza os botões imediatamente após gravar
             await verificarBloqueios();
 
         } catch (erro) {

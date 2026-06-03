@@ -27,6 +27,9 @@ body{
     height:100vh;
     background:#0f172a;
     border-right:1px solid rgba(255,255,255,0.1);
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
 }
 
 .sidebar h2{
@@ -50,6 +53,23 @@ body{
 
 .active{
     background:#1e293b;
+}
+
+.btn-logout {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    width: 100%;
+    text-align: left;
+    padding: 15px 20px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.3s;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.btn-logout:hover {
+    background: rgba(239, 68, 68, 0.1);
 }
 
 .container{
@@ -99,9 +119,12 @@ tr:hover{
 <body>
 
 <div class="sidebar">
-    <h2>📋 Menu</h2>
-    <a href="index.html">🏠 Ponto Digital</a>
-    <a href="historico.html" class="active">📅 Histórico</a>
+    <div>
+        <h2>📋 Menu</h2>
+        <a href="index.html">🏠 Ponto Digital</a>
+        <a href="historico.html" class="active">📅 Histórico</a>
+    </div>
+    <button class="btn-logout" id="btnLogout">🚪 Terminar Sessão</button>
 </div>
 
 <div class="container">
@@ -121,7 +144,7 @@ tr:hover{
     </table>
 
     <div class="sem-registos" id="vazio" style="display:none;">
-        Nenhum registo encontrado.
+        A verificar autenticação...
     </div>
 </div>
 
@@ -134,6 +157,11 @@ import {
     query,
     orderBy
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { 
+    getAuth, 
+    onAuthStateChanged, 
+    signOut 
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCBAOQPsVWqCmZ2YfDwEMfzbHpc3z4ua9A",
@@ -142,49 +170,53 @@ const firebaseConfig = {
     storageBucket: "picagem-de-ponto-899d2.firebasestorage.app",
     messagingSenderId: "235653631354",
     appId: "1:235653631354:web:c4909c8832b32cbea65ac3"
-}
+};
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 const corpoTabela = document.getElementById("corpoTabela");
 const vazio = document.getElementById("vazio");
 
-// Função para arredondar o horário para o bloco de 30 minutos mais próximo
+// GUARDA DE NAVEGAÇÃO: Garante sessão ativa antes de puxar dados do Firestore
+onAuthStateChanged(auth, (user) => {
+    if (!user) {
+        window.location.href = "login.html";
+    } else {
+        vazio.style.display = "none";
+        carregarHistorico();
+    }
+});
+
+// Ação do botão Terminar Sessão
+document.getElementById("btnLogout").addEventListener("click", () => {
+    signOut(auth).then(() => {
+        window.location.href = "login.html";
+    });
+});
+
 function arredondarHora(horaString) {
     if (!horaString || horaString === "-") return "-";
-    
     let [horas, minutos] = horaString.split(':').map(Number);
-    
-    // Converte tudo para minutos totais para simplificar a matemática
     let minutosTotais = horas * 60 + minutos;
-    
-    // Arredondamento para múltiplos de 30: Math.round(minutos / 30) * 30
     let minutosArredondados = Math.round(minutosTotais / 30) * 30;
-    
     let novasHoras = Math.floor(minutosArredondados / 60) % 24;
     let novosMinutos = minutosArredondados % 60;
-    
     return `${String(novasHoras).padStart(2, '0')}:${String(novosMinutos).padStart(2, '0')}`;
 }
 
-// Calcula a diferença real de tempo com base nos horários já arredondados
 function calcularDiferencaHoras(entrada, saida) {
     if (!entrada || entrada === "-" || !saida || saida === "-") return "-";
-    
     const [hEntrada, mEntrada] = entrada.split(':').map(Number);
     const [hSaida, mSaida] = saida.split(':').map(Number);
-    
     let totalMinutos = (hSaida * 60 + mSaida) - (hEntrada * 60 + mEntrada);
     if (totalMinutos < 0) return "-"; 
-
     const horas = Math.floor(totalMinutos / 60);
     const minutos = totalMinutos % 60;
-    
     return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}h`;
 }
 
-// Oculta coordenadas geográficas brutas
 function formatarLocalizacao(localizacao) {
     if (!localizacao) return "-";
     if (typeof localizacao === 'object' && ('latitude' in localizacao || 'lat' in localizacao)) {
@@ -195,15 +227,12 @@ function formatarLocalizacao(localizacao) {
 
 async function carregarHistorico(){
     try{
-        const q = query(
-            collection(db,"registos"),
-            orderBy("criadoEm","asc")
-        );
-
+        const q = query(collection(db,"registos"), orderBy("criadoEm","asc"));
         const snapshot = await getDocs(q);
 
         if(snapshot.empty){
             vazio.style.display = "block";
+            vazio.innerHTML = "Nenhum registo encontrado.";
             return;
         }
 
@@ -213,8 +242,6 @@ async function carregarHistorico(){
             const r = doc.data();
             const tipo = r.tipo ? r.tipo.toLowerCase().trim() : "";
             const localizacaoFormatada = formatarLocalizacao(r.localizacao);
-            
-            // Aplica a regra de arredondamento diretamente no dado bruto vindo do banco
             const horaTratada = arredondarHora(r.hora);
 
             if (tipo === "entrada") {
@@ -228,7 +255,6 @@ async function carregarHistorico(){
             } else if (tipo === "saída" || tipo === "saida") {
                 if (linhasTrabalho.length > 0) {
                     const ultimaLinha = linhasTrabalho[linhasTrabalho.length - 1];
-                    
                     if (ultimaLinha.saida === "-") {
                         ultimaLinha.saida = horaTratada;
                         ultimaLinha.horas = calcularDiferencaHoras(ultimaLinha.entrada, ultimaLinha.saida);
@@ -277,8 +303,6 @@ async function carregarHistorico(){
         vazio.innerHTML = "❌ Erro ao carregar os registos.";
     }
 }
-
-carregarHistorico();
 </script>
 
 </body>

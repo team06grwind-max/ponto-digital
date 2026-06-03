@@ -60,10 +60,6 @@ body{
     border-color:#94a3b8;
     transform:translateY(-2px);
 }
-.btn-google img {
-    width: 22px;
-    height: 22px;
-}
 .error-msg{
     margin-top:20px;
     color:#ef4444;
@@ -80,7 +76,6 @@ body{
     <div class="subtitle">Aceda ao sistema utilizando a sua conta Google</div>
 
     <button id="btnGoogle" class="btn-google">
-        <img src="https://fonts.gstatic.com/ea/triangles/v1/apple-icon-180x180.png" alt="" style="display:none;">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48">
             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
             <path fill="#4285F4" d="M46.5 24c0-1.55-.15-3.24-.47-4.75H24v9h12.75c-.53 2.87-2.13 5.32-4.59 6.98l7.15 5.54C43.5 36.46 46.5 31 46.5 24z"/>
@@ -98,7 +93,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebas
 import { 
     getAuth, 
     signInWithPopup, 
-    GoogleAuthProvider 
+    GoogleAuthProvider,
+    onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
 
 const firebaseConfig = {
@@ -114,13 +110,19 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
+// Se o utilizador já tiver sessão iniciada, avança direto para a picagem
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        window.location.href = "index.html";
+    }
+});
+
 document.getElementById("btnGoogle").addEventListener("click", async () => {
     const errorMsg = document.getElementById("errorMsg");
     errorMsg.style.display = "none";
 
     try {
         await signInWithPopup(auth, provider);
-        // Sucesso: Redireciona para o index.html
         window.location.href = "index.html";
     } catch (error) {
         console.error("Erro na autenticação do Google:", error.message);
