@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Histórico de Registos</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Segoe UI',sans-serif;
+}
+
+body{
+    background:#f1f5f9;
+    padding:30px;
+    padding-left:250px;
+}
+
+.sidebar{
+    position:fixed;
+    top:0;
+    left:0;
+    width:220px;
+    height:100vh;
+    background:#0f172a;
+    border-right:1px solid rgba(255,255,255,0.1);
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+}
+
+.sidebar h2{
+    color:white;
+    text-align:center;
+    padding:25px 10px;
+    border-bottom:1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar a{
+    display:block;
+    padding:15px 20px;
+    color:white;
+    text-decoration:none;
+    transition:.3s;
+}
+
+.sidebar a:hover{
+    background:#1e293b;
+}
+
+.active{
+    background:#1e293b;
+}
+
+.btn-logout {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    width: 100%;
+    text-align: left;
+    padding: 15px 20px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.3s;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.btn-logout:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.container{
+    max-width:1200px;
+    margin:auto;
+}
+
+h1{
+    text-align:center;
+    margin-bottom:30px;
+    color:#0f172a;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    background:white;
+    border-radius:12px;
+    overflow:hidden;
+    box-shadow:0 5px 20px rgba(0,0,0,.1);
+}
+
+th{
+    background:#0f172a;
+    color:white;
+    padding:15px;
+}
+
+td{
+    padding:15px;
+    text-align:center;
+    border-bottom:1px solid #e2e8f0;
+}
+
+tr:hover{
+    background:#f8fafc;
+}
+
+.sem-registos{
+    text-align:center;
+    margin-top:50px;
+    color:#64748b;
+    font-size:1.1rem;
+}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div>
+        <h2>📋 Menu</h2>
+        <a href="index.html">🏠 Ponto Digital</a>
+        <a href="historico.html" class="active">📅 Histórico</a>
+    </div>
+    <button class="btn-logout" id="btnLogout">🚪 Terminar Sessão</button>
+</div>
+
+<div class="container">
+    <h1>📋 Histórico de Registos</h1>
+
+    <table>
+        <thead>
+        <tr>
+            <th>Data</th>
+            <th>Entrada</th>
+            <th>Saída</th>
+            <th>Horas Trabalhadas</th>
+            <th>Localização</th>
+        </tr>
+        </thead>
+        <tbody id="corpoTabela"></tbody>
+    </table>
+
+    <div class="sem-registos" id="vazio" style="display:none;">
+        A verificar autenticação...
+    </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.9.1/firebase-app.js";
+import {
+    getFirestore,
+    collection,
+    getDocs,
+    query,
+    orderBy
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-firestore.js";
+import { 
+    getAuth, 
+    onAuthStateChanged, 
+    signOut 
+} from "https://www.gstatic.com/firebasejs/11.9.1/firebase-auth.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCBAOQPsVWqCmZ2YfDwEMfzbHpc3z4ua9A",
+    authDomain: "picagem-de-ponto-899d2.firebaseapp.com",
+    projectId: "picagem-de-ponto-899d2",
+    storageBucket: "picagem-de-ponto-899d2.firebasestorage.app",
+    messagingSenderId: "235653631354",
+    appId: "1:235653631354:web:c4909c8832b32cbea65ac3"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+const corpoTabela = document.getElementById("corpoTabela");
+const vazio = document.getElementById("vazio");
+
+// GUARDA DE NAVEGAÇÃO: Garante sessão ativa antes de puxar dados do Firestore
+onAuthStateChanged(auth, (user) => {
+    if (!user) {
+        window.location.href = "login.html";
+    } else {
+        vazio.style.display = "none";
+        carregarHistorico();
+    }
+});
+
+// Ação do botão Terminar Sessão
+document.getElementById("btnLogout").addEventListener("click", () => {
+    signOut(auth).then(() => {
+        window.location.href = "login.html";
+    });
+});
+
+function arredondarHora(horaString) {
+    if (!horaString || horaString === "-") return "-";
+    let [horas, minutos] = horaString.split(':').map(Number);
+    let minutosTotais = horas * 60 + minutos;
+    let minutosArredondados = Math.round(minutosTotais / 30) * 30;
+    let novasHoras = Math.floor(minutosArredondados / 60) % 24;
+    let novosMinutos = minutosArredondados % 60;
+    return `${String(novasHoras).padStart(2, '0')}:${String(novosMinutos).padStart(2, '0')}`;
+}
+
+function calcularDiferencaHoras(entrada, saida) {
+    if (!entrada || entrada === "-" || !saida || saida === "-") return "-";
+    const [hEntrada, mEntrada] = entrada.split(':').map(Number);
+    const [hSaida, mSaida] = saida.split(':').map(Number);
+    let totalMinutos = (hSaida * 60 + mSaida) - (hEntrada * 60 + mEntrada);
+    if (totalMinutos < 0) return "-"; 
+    const horas = Math.floor(totalMinutos / 60);
+    const minutos = totalMinutos % 60;
+    return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}h`;
+}
+
+function formatarLocalizacao(localizacao) {
+    if (!localizacao) return "-";
+    if (typeof localizacao === 'object' && ('latitude' in localizacao || 'lat' in localizacao)) {
+        return "Registada"; 
+    }
+    return localizacao;
+}
+
+async function carregarHistorico(){
+    try{
+        const q = query(collection(db,"registos"), orderBy("criadoEm","asc"));
+        const snapshot = await getDocs(q);
+
+        if(snapshot.empty){
+            vazio.style.display = "block";
+            vazio.innerHTML = "Nenhum registo encontrado.";
+            return;
+        }
+
+        const linhasTrabalho = [];
+
+        snapshot.forEach((doc) => {
+            const r = doc.data();
+            const tipo = r.tipo ? r.tipo.toLowerCase().trim() : "";
+            const localizacaoFormatada = formatarLocalizacao(r.localizacao);
+            const horaTratada = arredondarHora(r.hora);
+
+            if (tipo === "entrada") {
+                linhasTrabalho.push({
+                    data: r.data || "-",
+                    entrada: horaTratada,
+                    saida: "-",
+                    horas: "-",
+                    localizacao: localizacaoFormatada
+                });
+            } else if (tipo === "saída" || tipo === "saida") {
+                if (linhasTrabalho.length > 0) {
+                    const ultimaLinha = linhasTrabalho[linhasTrabalho.length - 1];
+                    if (ultimaLinha.saida === "-") {
+                        ultimaLinha.saida = horaTratada;
+                        ultimaLinha.horas = calcularDiferencaHoras(ultimaLinha.entrada, ultimaLinha.saida);
+                        if (ultimaLinha.localizacao === "-") {
+                            ultimaLinha.localizacao = localizacaoFormatada;
+                        }
+                    } else {
+                        linhasTrabalho.push({
+                            data: r.data || "-",
+                            entrada: "-",
+                            saida: horaTratada,
+                            horas: "-",
+                            localizacao: localizacaoFormatada
+                        });
+                    }
+                } else {
+                    linhasTrabalho.push({
+                        data: r.data || "-",
+                        entrada: "-",
+                        saida: horaTratada,
+                        horas: "-",
+                        localizacao: localizacaoFormatada
+                    });
+                }
+            }
+        });
+
+        linhasTrabalho.reverse();
+
+        corpoTabela.innerHTML = "";
+        linhasTrabalho.forEach((linha) => {
+            corpoTabela.innerHTML += `
+                <tr>
+                    <td>${linha.data}</td>
+                    <td>${linha.entrada}</td>
+                    <td>${linha.saida}</td>
+                    <td>${linha.horas}</td>
+                    <td>${linha.localizacao}</td>
+                </tr>
+            `;
+        });
+
+    }catch(erro){
+        console.error("Erro ao carregar histórico:", erro);
+        vazio.style.display = "block";
+        vazio.innerHTML = "❌ Erro ao carregar os registos.";
+    }
+}
+</script>
+
+</body>
+</html>
